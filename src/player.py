@@ -1,10 +1,10 @@
+import copy
+import random
 import numpy
 import numpy.typing
 import typing
 
-from game import Game, ActionType, TileType
-
-ACTIONS = {'U': (-1, 0), 'D': (1, 0), 'L': (0, -1), 'R': (0, 1)}
+from game import Game, ActionType, TileType, ACTIONS
 
 class Player(object):
     def __init__(self, game: Game, alpha=0.15, randomFactor=0.2):
@@ -15,7 +15,7 @@ class Player(object):
         self.game = game
 
 
-    def chooseAction(self) -> ActionType:
+    def chooseRandomAction(self) -> ActionType:
         nextMove = ACTIONS['U']
 
         notDecided = True
@@ -31,3 +31,38 @@ class Player(object):
                 break
 
         return nextMove
+
+    def simulateAction(self, game: Game, action: ActionType, prevHighestScore: int, depth: int) -> int:
+        if depth == 0:
+            return game.getScore()
+        
+        # Create a copy of the game we'll use to simulate moves.
+        simulatedGame = copy.deepcopy(game)
+        simulatedGame.move(action)
+        if simulatedGame.isGameOver():
+            return simulatedGame.getScore()
+
+        highestScore = simulatedGame.getScore()
+        for action in ACTIONS.values():
+            score = self.simulateAction(simulatedGame, action, highestScore, depth - 1)
+            if score > highestScore:
+                highestScore = score
+        return highestScore
+
+
+    def chooseEducatedGuess(self, depth) -> ActionType:
+        highestScore = self.game.getScore()
+        bestMove = (0,0)
+        
+        for action in ACTIONS.values():
+            score = self.simulateAction(self.game, action, highestScore, depth)
+            if score > highestScore:
+                bestMove = action
+                highestScore = score
+
+        return bestMove if bestMove != (0,0) else self.chooseRandomAction()
+
+
+    def chooseAction(self) -> ActionType:
+        # Too high depth values cause massive slowdowns.
+        return self.chooseEducatedGuess(4)

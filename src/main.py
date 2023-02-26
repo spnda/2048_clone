@@ -1,4 +1,5 @@
 import sys
+import time
 
 import matplotlib.pyplot as plt
 
@@ -19,8 +20,8 @@ def clearTerminal():
 
 def aiPlay(game: Game, player: Player) -> int:
     while not game.isGameOver():
-        clearTerminal()
-        printBoard(game)
+        # clearTerminal()
+        # printBoard(game)
         nextMove = player.chooseAction()
         game.move(nextMove)
     return game.getScore()
@@ -45,11 +46,13 @@ if __name__ == '__main__':
     if len(sys.argv) >= 2 and sys.argv[1] == 'ai':
         scores = []
         highestScore = 0
-        for i in range(1000):
+        b = time.time()
+        for i in range(5):
             newScore = aiPlay(game, player)
             scores.append(newScore)
             highestScore = max(highestScore, newScore)
             game.reset()
+        print("Time taken: ", time.time() - b)
         print("Highest score: ", highestScore)
         print("Average score: ", sum(scores) / len(scores))     
 

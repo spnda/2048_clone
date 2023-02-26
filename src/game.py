@@ -1,8 +1,10 @@
+import copy
 import numpy
 import numpy.typing
 import typing
 
 ACTIONS = {'U': (0, -1), 'D': (0, 1), 'L': (-1, 0), 'R': (1, 0)}
+ACTIONSL = list(ACTIONS)
 
 TileType = typing.Tuple[int, int]
 ActionType = typing.Tuple[int, int]
@@ -60,8 +62,18 @@ class Game(object):
         """
         Checks if a tile can move in any direction.
         """
-        for _, action in ACTIONS.items():
+        for action in ACTIONS.values():
             if self.canMoveInDirection(tile, action):
+                return True
+        return False
+
+    
+    def isActionPossible(self, action: ActionType) -> bool:
+        """
+        Checks if an action is possible by checking if any tile can move in the direction.
+        """
+        for (x, y), tile in numpy.ndenumerate(self.tiles):
+            if tile != 0 and self.canMoveInDirection((x, y), action):
                 return True
         return False
 
@@ -106,7 +118,8 @@ class Game(object):
                     x = xn
                     y = yn
 
-                if self.isOnBoard((x + dx, y + dy)) and self.canCombine((x, y), (x + dx, y + dy)):
+                # Avoid double combines too with checking if the target tile has been changed already.
+                if self.isOnBoard((x + dx, y + dy)) and self.canCombine((x, y), (x + dx, y + dy)) and not self.changedTiles.get((x + dx, y + dy), False):
                     self.tiles[x + dx, y + dy] *= 2
                     self.tiles[x, y] = 0
                     self.changedTiles[(x + dx, y + dy)] = True
@@ -117,18 +130,19 @@ class Game(object):
         self.changedTiles.clear()
 
 
-    def placeRandomTileOnBoard(self):
+    def placeRandomTileOnBoard(self, count: int = 1):
         """
         Places a random tile on the board, anywhere that is empty. 90% chance
         for a 2, 10% chance for a 4.
         """
         i = 0
-        while i < 16:
-            x, y = tuple(numpy.random.randint(self.boardSize, size=2))
-            if self.tiles[x, y] == 0:
-                self.tiles[x, y] = 2 if numpy.random.random() < 0.9 else 4
+        while True:
+            r = tuple(numpy.random.randint(self.boardSize, size=2))
+            if self.tiles[r] == 0:
+                self.tiles[r] = 2 if numpy.random.random() < 0.9 else 4
+                i += 1
+            if i == count:
                 break
-            i += 1
 
 
     def reset(self):
@@ -141,5 +155,13 @@ class Game(object):
         self.changedTiles = {}
         
         # The game always starts with two tiles on the board
-        self.placeRandomTileOnBoard()
-        self.placeRandomTileOnBoard()
+        self.placeRandomTileOnBoard(2)
+
+    
+    def __deepcopy__(self, memo):
+        # Similar to reset() but only does the necessary things and the deepcopies.
+        newGame = Game(self.boardSize)
+        newGame.score = self.score
+        newGame.tiles = copy.deepcopy(self.tiles)
+        newGame.changedTiles = {}
+        return newGame
